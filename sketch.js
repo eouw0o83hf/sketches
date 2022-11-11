@@ -4,7 +4,7 @@ const height = 800
 function setup() {
   createCanvas(width, height);
 
-  for (var i = 0; i < 10; ++i) {
+  for (var i = 0; i < 4; ++i) {
     points.push([
       random(0, width),
       random(0, height)
@@ -45,21 +45,24 @@ function draw() {
 
         min = 30
 
-        if (points[i][0] < min) {
-          points[i][0] = min;
-          velocities[i][0] = -velocities[i][0]
-        }
-        if (points[i][1] < min) {
-          points[i][1] = min;
-          velocities[i][1] = -velocities[i][1]
-        }
-        if (points[i][0] > width - min) {
-          points[i][0] = width - min;
-          velocities[i][0] = -velocities[i][0]
-        }
-        if (points[i][1] > height - min) {
-          points[i][1] = height - min;
-          velocities[i][1] = -velocities[i][1]
+        if (i == 0 || i == points.length - 1) {
+
+          if (points[i][0] < min) {
+            points[i][0] = min;
+            velocities[i][0] = -velocities[i][0]
+          }
+          if (points[i][1] < min) {
+            points[i][1] = min;
+            velocities[i][1] = -velocities[i][1]
+          }
+          if (points[i][0] > width - min) {
+            points[i][0] = width - min;
+            velocities[i][0] = -velocities[i][0]
+          }
+          if (points[i][1] > height - min) {
+            points[i][1] = height - min;
+            velocities[i][1] = -velocities[i][1]
+          }
         }
       }
     }
@@ -67,23 +70,47 @@ function draw() {
   } else mouseWasPressed = false;
 
   noFill()
-  stroke(255, 0, 0)
-  strokeWeight(5)
+  strokeWeight(8)
 
   background(255);
 
-  for (var i = 0; i < points.length - 1; ++i) {
+  for (var i = 0; i < points.length; ++i) {
+    stroke(
+      hslForIndex(i)
+    )
+
+    var prevIndex = (points.length + i - 1) % points.length
+    var nextIndex = (i + 1) % points.length
+    var ctrlIndex = (i + 2) % points.length
+
+    var prev = points[prevIndex]
     var coord = points[i]
-    var next = points[i + 1]
+    var next = points[nextIndex]
+    var ctrl = points[ctrlIndex]
+
+    curve(prev[0], prev[1], coord[0], coord[1], next[0], next[1], ctrl[0], ctrl[1])
 
     joint(coord)
-    line(coord[0], coord[1], next[0], next[1])
   }
 
 
   joint(points[points.length - 1])
+
+  baseline = baseline + 0.35
+  if (baseline > 360) baseline = 0;
 }
 
 function joint(coord) {
-  ellipse(coord[0], coord[1], 30, 30)
+  // ellipse(coord[0], coord[1], 30, 30)
+}
+
+baseline = 0
+
+function hslForIndex(i) {
+  step = 5
+
+  angle = baseline + step * i
+  while (angle > 360) angle -= 360
+  angle = Math.floor(angle)
+  return 'hsl(' + angle + ', 100%, 50%)'
 }
