@@ -1,6 +1,6 @@
 // consts
-const width = 1200
-const height = 800
+const width = 1600
+const height = 1000
 const lineWidth = 40
 const leftLineX = (width - lineWidth) / 2
 const rightLineX = (width + lineWidth) / 2
@@ -43,9 +43,20 @@ function draw() {
   strokeWeight(5)
 
 
-  var lineXs = [250, 500, 750]
+  var lineXs = [0, 150, 300, 450, 600, 750, 900, 1050, 1200, 1350]
   // must be one longer than lineXs
-  var colors = [hslForIndex(0, 100), hslForIndex(100, 100), hslForIndex(200, 100), hslForIndex(300, 100)];
+  var colors = [
+    hslForIndex(0, 100),
+    hslForIndex(100, 100),
+    hslForIndex(200, 100),
+    hslForIndex(300, 100),
+    hslForIndex(400, 100),
+    hslForIndex(500, 100),
+    hslForIndex(600, 100),
+    hslForIndex(700, 100),
+    hslForIndex(800, 100),
+    hslForIndex(900, 100),
+    hslForIndex(1000, 100)];
 
   fill(colors[0]);
 
@@ -78,6 +89,7 @@ function draw() {
     // now, start the right one
     beginShape()
     fill(colors[i + 1])
+    stroke(colors[(i + 3 + Math.floor(colors.length / 2)) % colors.length])
     for (var j = nodes.length - 1; j >= 0; --j) {
       // don't worry about double-entering the first one, we have plenty
       // of margin below the frame
@@ -142,14 +154,16 @@ function getFieldStrength(x, y, t) {
       continue
     }
 
-    var amplitude = source.amp * Math.sin((d + t) * source.freq + source.phase)
+    // traversing time in the negative direction makes the
+    // waves flow intuitively. idk.
+    var amplitude = source.amp * Math.sin((d - t) * source.freq + source.phase)
     // attenuate with distance
     amplitude *= Math.abs(width - d) / width
     // attenuate with time
     amplitude *= (maxNodeAge - age) / maxNodeAge
 
-    xDiff += amplitude * Math.cos((source.x - x) / d)
-    yDiff += amplitude * Math.sin((source.y - y) / d)
+    xDiff += amplitude * (source.x - x) / d
+    yDiff += amplitude * (source.y - y) / d
   }
 
   return {
@@ -173,7 +187,7 @@ function getSource(t) {
   return {
     x: mouseX,
     y: mouseY,
-    amp: random(0, 100),
+    amp: random(0, 75),
     freq: random(0, 0.1),
     phase: random(0, Math.PI),
     timestamp: t
