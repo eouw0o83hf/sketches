@@ -1,22 +1,10 @@
+// consts
 const width = 1200
 const height = 800
-
-var sources = []
-
-var lineWidth = 40
-var leftLineX = (width - lineWidth) / 2
-var rightLineX = (width + lineWidth) / 2
-var _t = 0
-
-function getSource() {
-  return {
-    x: random(-width, width * 2),
-    y: random(-height, height * 2),
-    amp: random(0, 100),
-    freq: random(0, 0.8),
-    phase: random(0, Math.PI)
-  }
-}
+const lineWidth = 40
+const leftLineX = (width - lineWidth) / 2
+const rightLineX = (width + lineWidth) / 2
+const maxNodeAge = 1000
 
 function setup() {
   createCanvas(width, height);
@@ -26,37 +14,34 @@ function setup() {
       y: height / 2,
       amp: 33,
       freq: 0.1,
-      phase: 0
+      phase: 0,
+      timestamp: 0
     }
   ]
 }
 
+// state
+var sources = []
+var _t = 0
 var mouseWasPressed = false
-
-// function draw_curevshapeexample() {
-//   fill(hslForIndex(0, 100))
-//   noStroke()
-
-//   beginShape();
-//   curveVertex(84, 91);
-//   curveVertex(84, 91);
-//   curveVertex(68, 19);
-//   curveVertex(21, 17);
-//   curveVertex(32, 91);
-//   curveVertex(32, 91);
-//   endShape();
-// }
+var lineXs = [width / 2]
+var colors = [
+  hslForIndex(0, 100), hslForIndex(100, 100)
+]
 
 function draw() {
   if (mouseIsPressed) {
     if (!mouseWasPressed) {
-      sources = sources.concat(getSource())
+      sources = sources.concat(getSource(_t))
     }
     mouseWasPressed = true
   } else mouseWasPressed = false;
 
   background(255);
-  // noStroke();
+
+  stroke(hslForIndex(300, 100))
+  strokeWeight(5)
+
 
   var lineXs = [250, 500, 750]
   // must be one longer than lineXs
@@ -65,8 +50,13 @@ function draw() {
   fill(colors[0]);
 
   // up
-  line(0, height, 0, 0);
-  line(0, 0, lineXs[0], 0)
+  beginShape()
+  // from bottom left to top left, draw a curve way outside of the frame
+  // this is a hack because you can't intermix curves and lines
+  curveVertex(-lineMargin, height + lineMargin)
+  // first entry is control entry, this starts drawing
+  curveVertex(-lineMargin, height + lineMargin)
+  curveVertex(-lineMargin, -lineMargin)
 
   var prevLastNode = { x: 0, y: height };
 
@@ -75,55 +65,53 @@ function draw() {
 
     // first, finish the left one
     for (var j = 0; j < nodes.length; ++j) {
-      var points = [
-        nodes[Math.max(0, j - 1)],
-        nodes[j],
-        nodes[Math.min(nodes.length - 1, j + 1)],
-        nodes[Math.min(nodes.length - 1, j + 2)]
-      ];
-
-      curve(
-        points[0].x, points[0].y,
-        points[1].x, points[1].y,
-        points[2].x, points[2].y,
-        points[3].x, points[3].y,
-      );
+      curveVertex(nodes[j].x, nodes[j].y)
     }
 
     var lastNode = nodes[nodes.length - 1]
-    line(lastNode.x, lastNode.y, prevLastNode.x, prevLastNode.y)
+    curveVertex(prevLastNode.x, prevLastNode.y)
+
+    endShape()
+
     prevLastNode = lastNode
 
     // now, start the right one
+    beginShape()
     fill(colors[i + 1])
     for (var j = nodes.length - 1; j >= 0; --j) {
-      var points = [
-        nodes[Math.min(nodes.length, j)],
-        nodes[j],
-        nodes[Math.max(0, j - 1)],
-        nodes[Math.max(0, j - 2)]
-      ];
-
-      curve(
-        points[0].x, points[0].y,
-        points[1].x, points[1].y,
-        points[2].x, points[2].y,
-        points[3].x, points[3].y,
-      );
+      // don't worry about double-entering the first one, we have plenty
+      // of margin below the frame
+      curveVertex(nodes[j].x, nodes[j].y)
     }
   }
 
-  line(width, 0, width, height)
+  curveVertex(width + lineMargin, -lineMargin)
+  curveVertex(width + lineMargin, height + lineMargin)
+  curveVertex(width + lineMargin, height + lineMargin)
+
+  endShape()
+
+  for (var i = 0; i < sources.length; ++i) {
+    var source = sources[i]
+    var age = _t - source.timestamp
+    if (age > maxNodeAge) {
+      continue
+    }
+
+    fill(255, 0, 0, 255 * (maxNodeAge - age) / maxNodeAge)
+    stroke(255, 255, 255, 255 * (maxNodeAge - age) / maxNodeAge)
+    strokeWeight(3)
+    circle(sources[i].x, sources[i].y, 15)
+  }
 
   ++_t
 }
 
+const lineMargin = 50;
 function getLineValues(x) {
-  var result = [
-    { x: x, y: 0 }
-  ]
+  var result = []
 
-  for (var i = 0; i < height; i++) {
+  for (var i = -lineMargin; i < height + lineMargin; i++) {
     field = getFieldStrength(x, i, _t)
     result = result.concat(
       {
@@ -138,10 +126,14 @@ function getLineValues(x) {
 function getFieldStrength(x, y, t) {
   var xDiff = 0
   var yDiff = 0
-  t /= 10
 
   for (var i = 0; i < sources.length; ++i) {
     var source = sources[i]
+    var age = t - source.timestamp
+    if (age > maxNodeAge) {
+      continue
+    }
+
     var d = Math.sqrt(
       Math.pow(source.y - y, 2) +
       Math.pow(source.x - x, 2))
@@ -151,7 +143,10 @@ function getFieldStrength(x, y, t) {
     }
 
     var amplitude = source.amp * Math.sin((d + t) * source.freq + source.phase)
+    // attenuate with distance
     amplitude *= Math.abs(width - d) / width
+    // attenuate with time
+    amplitude *= (maxNodeAge - age) / maxNodeAge
 
     xDiff += amplitude * Math.cos((source.x - x) / d)
     yDiff += amplitude * Math.sin((source.y - y) / d)
@@ -172,4 +167,15 @@ function hslForIndex(i, a) {
   while (angle > 360) angle -= 360
   angle = Math.floor(angle)
   return 'hsla(' + angle + ', 100%, 50%, ' + a + ') '
+}
+
+function getSource(t) {
+  return {
+    x: mouseX,
+    y: mouseY,
+    amp: random(0, 100),
+    freq: random(0, 0.1),
+    phase: random(0, Math.PI),
+    timestamp: t
+  }
 }
