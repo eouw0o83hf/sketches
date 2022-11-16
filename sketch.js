@@ -1,116 +1,175 @@
 const width = 1200
 const height = 800
 
-function setup() {
-  createCanvas(width, height);
+var sources = []
 
-  for (var i = 0; i < 4; ++i) {
-    points.push([
-      random(0, width),
-      random(0, height)
-    ])
+var lineWidth = 40
+var leftLineX = (width - lineWidth) / 2
+var rightLineX = (width + lineWidth) / 2
+var _t = 0
 
-    velocities.push([0, 0])
+function getSource() {
+  return {
+    x: random(-width, width * 2),
+    y: random(-height, height * 2),
+    amp: random(0, 100),
+    freq: random(0, 0.8),
+    phase: random(0, Math.PI)
   }
 }
 
-var done = false;
-// array of [x, y]
-var points = []
-var velocities = []
+function setup() {
+  createCanvas(width, height);
+  sources = [
+    {
+      x: width / 2,
+      y: height / 2,
+      amp: 33,
+      freq: 0.1,
+      phase: 0
+    }
+  ]
+}
+
 var mouseWasPressed = false
+
+// function draw_curevshapeexample() {
+//   fill(hslForIndex(0, 100))
+//   noStroke()
+
+//   beginShape();
+//   curveVertex(84, 91);
+//   curveVertex(84, 91);
+//   curveVertex(68, 19);
+//   curveVertex(21, 17);
+//   curveVertex(32, 91);
+//   curveVertex(32, 91);
+//   endShape();
+// }
 
 function draw() {
   if (mouseIsPressed) {
     if (!mouseWasPressed) {
-      points.push(
-        [points[points.length - 1][0], points[points.length - 1][1]]
-      )
-      velocities.push([0, 0])
-
-      // regenerate
-      for (var i = 0; i < points.length; ++i) {
-        maxV = 7
-        velocities[i] = [
-          random(-maxV, maxV), random(-maxV, maxV)
-        ]
-      }
-    } else {
-      // migrate
-      for (var i = 0; i < points.length; ++i) {
-        points[i] = [
-          points[i][0] + velocities[i][0],
-          points[i][1] + velocities[i][1]
-        ]
-
-        min = 30
-
-        if (i == 0 || i == points.length - 1) {
-
-          if (points[i][0] < min) {
-            points[i][0] = min;
-            velocities[i][0] = -velocities[i][0]
-          }
-          if (points[i][1] < min) {
-            points[i][1] = min;
-            velocities[i][1] = -velocities[i][1]
-          }
-          if (points[i][0] > width - min) {
-            points[i][0] = width - min;
-            velocities[i][0] = -velocities[i][0]
-          }
-          if (points[i][1] > height - min) {
-            points[i][1] = height - min;
-            velocities[i][1] = -velocities[i][1]
-          }
-        }
-      }
+      sources = sources.concat(getSource())
     }
     mouseWasPressed = true
   } else mouseWasPressed = false;
 
-  noFill()
-  strokeWeight(8)
-
   background(255);
+  // noStroke();
 
-  for (var i = 0; i < points.length; ++i) {
-    stroke(
-      hslForIndex(i)
-    )
+  var lineXs = [250, 500, 750]
+  // must be one longer than lineXs
+  var colors = [hslForIndex(0, 100), hslForIndex(100, 100), hslForIndex(200, 100), hslForIndex(300, 100)];
 
-    var prevIndex = (points.length + i - 1) % points.length
-    var nextIndex = (i + 1) % points.length
-    var ctrlIndex = (i + 2) % points.length
+  fill(colors[0]);
 
-    var prev = points[prevIndex]
-    var coord = points[i]
-    var next = points[nextIndex]
-    var ctrl = points[ctrlIndex]
+  // up
+  line(0, height, 0, 0);
+  line(0, 0, lineXs[0], 0)
 
-    curve(prev[0], prev[1], coord[0], coord[1], next[0], next[1], ctrl[0], ctrl[1])
+  var prevLastNode = { x: 0, y: height };
 
-    joint(coord)
+  for (var i = 0; i < lineXs.length; ++i) {
+    var nodes = getLineValues(lineXs[i]);
+
+    // first, finish the left one
+    for (var j = 0; j < nodes.length; ++j) {
+      var points = [
+        nodes[Math.max(0, j - 1)],
+        nodes[j],
+        nodes[Math.min(nodes.length - 1, j + 1)],
+        nodes[Math.min(nodes.length - 1, j + 2)]
+      ];
+
+      curve(
+        points[0].x, points[0].y,
+        points[1].x, points[1].y,
+        points[2].x, points[2].y,
+        points[3].x, points[3].y,
+      );
+    }
+
+    var lastNode = nodes[nodes.length - 1]
+    line(lastNode.x, lastNode.y, prevLastNode.x, prevLastNode.y)
+    prevLastNode = lastNode
+
+    // now, start the right one
+    fill(colors[i + 1])
+    for (var j = nodes.length - 1; j >= 0; --j) {
+      var points = [
+        nodes[Math.min(nodes.length, j)],
+        nodes[j],
+        nodes[Math.max(0, j - 1)],
+        nodes[Math.max(0, j - 2)]
+      ];
+
+      curve(
+        points[0].x, points[0].y,
+        points[1].x, points[1].y,
+        points[2].x, points[2].y,
+        points[3].x, points[3].y,
+      );
+    }
   }
 
+  line(width, 0, width, height)
 
-  joint(points[points.length - 1])
-
-  baseline = baseline + 0.35
-  if (baseline > 360) baseline = 0;
+  ++_t
 }
 
-function joint(coord) {
-  // ellipse(coord[0], coord[1], 30, 30)
+function getLineValues(x) {
+  var result = [
+    { x: x, y: 0 }
+  ]
+
+  for (var i = 0; i < height; i++) {
+    field = getFieldStrength(x, i, _t)
+    result = result.concat(
+      {
+        x: x + field.x,
+        y: i + field.y,
+      })
+  }
+
+  return result
 }
 
-baseline = 0
+function getFieldStrength(x, y, t) {
+  var xDiff = 0
+  var yDiff = 0
+  t /= 10
 
-function hslForIndex(i) {
+  for (var i = 0; i < sources.length; ++i) {
+    var source = sources[i]
+    var d = Math.sqrt(
+      Math.pow(source.y - y, 2) +
+      Math.pow(source.x - x, 2))
+    // use width as the max range of a node
+    if (d > width) {
+      continue
+    }
+
+    var amplitude = source.amp * Math.sin((d + t) * source.freq + source.phase)
+    amplitude *= Math.abs(width - d) / width
+
+    xDiff += amplitude * Math.cos((source.x - x) / d)
+    yDiff += amplitude * Math.sin((source.y - y) / d)
+  }
+
+  return {
+    x: xDiff,
+    y: yDiff
+  }
+}
+
+var baseline = 0
+
+function hslForIndex(i, a) {
   step = 5
 
   angle = baseline + step * i
   while (angle > 360) angle -= 360
   angle = Math.floor(angle)
-  return 'hsl(' + angle + ', 100%, 50%)'
+  return 'hsla(' + angle + ', 100%, 50%, ' + a + ') '
 }
