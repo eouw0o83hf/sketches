@@ -9,19 +9,20 @@ const maxNodeAge = 1000
 function setup() {
   createCanvas(width, height);
   sources = [
-    {
-      x: width / 2,
-      y: height / 2,
-      amp: 33,
-      freq: 0.1,
-      phase: 0,
-      timestamp: 0
-    }
+    // getSource(0)
   ]
 }
 
 // state
-var sources = []
+var sources = [{
+  x: 0,
+  y: 0,
+  amp: 0.0,
+  freq: 0.0,
+  phase: 0.0,
+  timestamp: 0,
+  type: 'radial | normal | linear'
+}].slice(0, 0);
 var _t = 0
 var mouseWasPressed = false
 var lineXs = [width / 2]
@@ -124,7 +125,7 @@ function getLineValues(x) {
   var result = []
 
   for (var i = -lineMargin; i < height + lineMargin; i++) {
-    field = getFieldStrength(x, i, _t)
+    field = getFieldTensor(x, i, _t)
     result = result.concat(
       {
         x: x + field.x,
@@ -135,41 +136,102 @@ function getLineValues(x) {
   return result
 }
 
-function getFieldStrength(x, y, t) {
+function getFieldTensor(x, y, t) {
   var xDiff = 0
   var yDiff = 0
 
   for (var i = 0; i < sources.length; ++i) {
     var source = sources[i]
-    var age = t - source.timestamp
-    if (age > maxNodeAge) {
-      continue
+    var diff
+    switch (source.type) {
+      case 'radial':
+        diff = getRadialTensor(source, x, y, t)
+        break
+      case 'normal':
+        diff = getNormalTensor(source, x, y, t)
+        break
+      case 'linear':
+        diff = getLinearTensor(source, x, y, t)
+        break
+      default:
+        console.error('source type not handled in getFieldTensor: [' + source.type + ']')
+        continue
     }
 
-    var d = Math.sqrt(
-      Math.pow(source.y - y, 2) +
-      Math.pow(source.x - x, 2))
-    // use width as the max range of a node
-    if (d > width) {
-      continue
-    }
-
-    // traversing time in the negative direction makes the
-    // waves flow intuitively. idk.
-    var amplitude = source.amp * Math.sin((d - t) * source.freq + source.phase)
-    // attenuate with distance
-    amplitude *= Math.abs(width - d) / width
-    // attenuate with time
-    amplitude *= (maxNodeAge - age) / maxNodeAge
-
-    xDiff += amplitude * (source.x - x) / d
-    yDiff += amplitude * (source.y - y) / d
+    xDiff += diff.x
+    yDiff += diff.y
   }
 
   return {
     x: xDiff,
     y: yDiff
   }
+}
+
+function getRadialTensor(source, x, y, t) {
+  var age = t - source.timestamp
+  if (age > maxNodeAge) {
+    return { x: 0, y: 0 }
+  }
+
+  var d = Math.sqrt(
+    Math.pow(source.y - y, 2) +
+    Math.pow(source.x - x, 2))
+  // use width as the max range of a node
+  if (d > width) {
+    return { x: 0, y: 0 }
+  }
+
+  // traversing time in the negative direction makes the
+  // waves flow intuitively. idk.
+  var amplitude = source.amp * Math.sin((d - t) * source.freq + source.phase)
+  // attenuate with distance
+  amplitude *= Math.abs(width - d) / width
+  // attenuate with time
+  amplitude *= (maxNodeAge - age) / maxNodeAge
+
+  xDiff = amplitude * (source.x - x) / d
+  yDiff = amplitude * (source.y - y) / d
+
+  return { x: xDiff, y: yDiff }
+}
+
+// todo refactor with getRadial
+function getNormalTensor(source, x, y, t) {
+  var age = t - source.timestamp
+  if (age > maxNodeAge) {
+    return { x: 0, y: 0 }
+  }
+
+  var d = Math.sqrt(
+    Math.pow(source.y - y, 2) +
+    Math.pow(source.x - x, 2))
+  // use width as the max range of a node
+  if (d > width) {
+    return { x: 0, y: 0 }
+  }
+
+  // traversing time in the negative direction makes the
+  // waves flow intuitively. idk.
+  var amplitude = source.amp * Math.sin((d - t) * source.freq + source.phase)
+  // attenuate with distance
+  amplitude *= Math.abs(width - d) / width
+  // attenuate with time
+  amplitude *= (maxNodeAge - age) / maxNodeAge
+
+  xDiff = amplitude * (source.y - y) / d
+  yDiff = amplitude * (source.x - x) / d
+
+  return { x: xDiff, y: yDiff }
+}
+
+function getLinearTensor(source, x, y, t) {
+  var age = t - source.timestamp
+  if (age > maxNodeAge) {
+    return { x: 0, y: 0 }
+  }
+
+
 }
 
 var baseline = 0
@@ -187,9 +249,10 @@ function getSource(t) {
   return {
     x: mouseX,
     y: mouseY,
-    amp: random(0, 75),
-    freq: random(0, 0.1),
+    amp: 50,// random(0, 75),
+    freq: 0.075,// random(0, 0.1),
     phase: random(0, Math.PI),
-    timestamp: t
+    timestamp: t,
+    type: 'radial',// random(['radial', 'normal'])
   }
 }
