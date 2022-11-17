@@ -4,7 +4,7 @@ const height = 1000
 const lineWidth = 40
 const leftLineX = (width - lineWidth) / 2
 const rightLineX = (width + lineWidth) / 2
-const maxNodeAge = 1000
+const maxNodeAge = 10000
 
 function setup() {
   createCanvas(width, height);
@@ -111,8 +111,11 @@ function draw() {
       continue
     }
 
-    fill(255, 0, 0, 255 * (maxNodeAge - age) / maxNodeAge)
-    stroke(255, 255, 255, 255 * (maxNodeAge - age) / maxNodeAge)
+    var ageFactor = (maxNodeAge - age) / maxNodeAge
+    var pulseFactor = (Math.sin((_t + source.phase) * source.freq) + 1) / 2
+
+    fill(255, 0, 0, 200 * ageFactor * pulseFactor)
+    stroke(255, 255, 255, 200 * ageFactor * pulseFactor)
     strokeWeight(3)
     circle(sources[i].x, sources[i].y, 15)
   }
@@ -249,8 +252,8 @@ function getSource(t) {
   return {
     x: mouseX,
     y: mouseY,
-    amp: 50,// random(0, 75),
-    freq: 0.075,// random(0, 0.1),
+    amp: random(45, 55),
+    freq: random(0.06, 0.075),
     phase: random(0, Math.PI),
     timestamp: t,
     type: 'radial',// random(['radial', 'normal'])
