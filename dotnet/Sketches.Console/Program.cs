@@ -49,11 +49,7 @@ internal class Program
             var frame = new byte[height, width, 3];
             Console.WriteLine($"\rRendering frame {t + 1} of {count}");
 
-            // using var bm = new SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Unpremul);
-            // using var canvas = new SKCanvas(bm);
-
-            // canvas.Clear(SKColors.Black);
-            for (var i = 0; i < width; ++i)
+            Parallel.For(0, width, i =>
             {
                 for (var j = 0; j < height; ++j)
                 {
@@ -62,17 +58,11 @@ internal class Program
                     frame[j, i, 0] = rgb;
                     frame[j, i, 1] = rgb;
                     frame[j, i, 2] = rgb;
-
-                    // var paint = new SKPaint
-                    // {
-                    //     Color = new SKColor(255, 255, 255, (byte)(255 * color))
-                    // };
-                    // canvas.DrawPoint(i, j, paint);
                 }
-            }
+            });
             var bm = Utilities.ArrayToImage(frame);
 
-            using SKBitmapFrame result = new(bm);
+            using var result = new SKBitmapFrame(bm);
             yield return result;
         }
     }
@@ -98,7 +88,7 @@ internal class Program
 
         var videoPath = Path.Combine(workingDir, "renders/noisevideo.webm");
 
-        var frames = NoiseFrames(count: 10, width: 1200, height: 800);
+        var frames = NoiseFrames(count: 100, width: 1200, height: 800);
         RawVideoPipeSource videoFramesSource = new(frames) { FrameRate = 30 };
         try
         {
