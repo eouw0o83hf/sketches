@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Security.Cryptography;
 
 namespace Sketches.Console;
 
@@ -11,7 +10,32 @@ namespace Sketches.Console;
 /// </source>
 public class Fbm
 {
-    float fbm(Vector3 x, float H)
+    public static float Pattern3(Vector2 p, float? z = null)
+    {
+        var q = new Vector2(fbm(p + new Vector2(0.0f, 0.0f), z),
+                       fbm(p + new Vector2(5.2f, 1.3f), z));
+
+        var r = new Vector2(fbm(p + 4.0f * q + new Vector2(1.7f, 9.2f), z),
+                       fbm(p + 4.0f * q + new Vector2(8.3f, 2.8f), z));
+
+        return fbm(p + 4.0f * r, z);
+    }
+
+    public static float Pattern2(Vector2 p)
+    {
+        var q = new Vector2(fbm(p + new Vector2(0.0f, 0.0f)),
+                       fbm(p + new Vector2(5.2f, 1.3f)));
+
+        return fbm(p + Vector2.Multiply(4.0f, q));
+    }
+
+    public static float Pattern(Vector2 p)
+        => fbm(new Vector3(p.X, p.Y, 0), 1);
+
+    static float fbm(Vector2 x, float? z = null)
+        => fbm(new Vector3(x.X, x.Y, z ?? 0f), 1f);
+
+    static float fbm(Vector3 x, float H)
     {
         var numOctaves = 3;
         float G = (float)Math.Pow(2f, -H);
@@ -33,13 +57,13 @@ public class Fbm
     private static readonly Vector3 two = new Vector3(2, 2, 2);
     private static readonly Vector3 one = new Vector3(1, 1, 1);
 
-    float noise(in Vector3 x)
+    static float noise(in Vector3 x)
     {
-        var p = new Vector3(float.Floor(x[0]), float.Floor(x[1]), float.Floor(x[2]));
+        var p = new Vector3(float.Floor(x.X), float.Floor(x.Y), float.Floor(x.Z));
         var w = x - p;
 
         var u = w * w * w * (w * (Vector3.Multiply(6, w) - fifteen) + ten);
-        float n = p[0] + 317.0f * p[1] + 157.0f * p[2];
+        float n = p.X + 317.0f * p.Y + 157.0f * p.Z;
 
         float a = hash1(n + 0.0f);
         float b = hash1(n + 1.0f);
@@ -59,7 +83,7 @@ public class Fbm
         float k6 = a - b - e + f;
         float k7 = -a + b + c - d + e - f - g + h;
 
-        return -1.0f + 2.0f * (k0 + k1 * u[0] + k2 * u[1] + k3 * u[2] + k4 * u[0] * u[1] + k5 * u[1] * u[2] + k6 * u[2] * u[0] + k7 * u[0] * u[1] * u[2]);
+        return -1.0f + 2.0f * (k0 + k1 * u.X + k2 * u.Y + k3 * u.Z + k4 * u.X * u.Y + k5 * u.Y * u.Z + k6 * u.Z * u.X + k7 * u.X * u.Y * u.Z);
     }
 
     // double ValueNoise(Vector3 x)
@@ -91,21 +115,21 @@ public class Fbm
     //     return -1.0 + 2.0 * (k0 + k1 * u.x + k2 * u.y + k3 * u.z + k4 * u.x * u.y + k5 * u.y * u.z + k6 * u.z * u.x + k7 * u.x * u.y * u.z;
     // }
 
-    float hash1(Vector2 p)
+    static float hash1(Vector2 p)
     {
         var tmp = Vector2.Multiply(0.3183099f, p);
-        var floor = new Vector2(float.Floor(tmp[0]), float.Floor(tmp[1]));
+        var floor = new Vector2(float.Floor(tmp.X), float.Floor(tmp.Y));
         var fractional = tmp - floor;
 
         p = Vector2.Multiply(50.0f, fractional);
 
-        return fract(p[0] * p[1] * (p[0] + p[1]));
+        return fract(p.X * p.Y * (p.X + p.Y));
     }
 
-    float hash1(float n)
+    static float hash1(float n)
     {
         return fract(n * 17.0f * fract(n * 0.3183099f));
     }
 
-    float fract(float n) => n - float.Floor(n);
+    static float fract(float n) => n - float.Floor(n);
 }
