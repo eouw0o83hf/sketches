@@ -6,10 +6,50 @@ using Instances.Exceptions;
 using Sketches.Console;
 using System.Numerics;
 using FFMpegCore.Arguments;
+using Sketches.Console.Scenes.Canandaigua;
 
 
 internal class Program
 {
+
+    private static void Main(string[] args)
+    {
+        var workingDir = Directory.GetParent(Environment.CurrentDirectory)!.Parent!.Parent!.FullName;
+        var videoPath = Path.Combine(workingDir, "renders/render.webm");
+
+        var width = 1200;
+        var height = 800;
+        var count = 10;
+
+        IRenderable render = new Background(width, height);
+        var frames = RenderFrames(render, count, width, height);
+
+        RawVideoPipeSource videoFramesSource = new(frames) { FrameRate = 30 };
+        try
+        {
+            bool success = FFMpegArguments
+                .FromPipeInput(videoFramesSource)
+                .OutputToFile(videoPath, overwrite: true, options => options.WithVideoCodec("libvpx-vp9"))
+                .ProcessSynchronously();
+        }
+        catch (InstanceFileNotFoundException ex)
+        {
+            throw new Exception("You need to install ffmpeg, visit https://www.ffmpeg.org/download.html", ex);
+        }
+    }
+
+    private static IEnumerable<IVideoFrame> RenderFrames(IRenderable render, int count, int width, int height)
+    {
+        for (int t = 0; t < count; t++)
+        {
+            var frame = render.Render(t);
+            var bm = Utilities.ArrayToImage1D(width, height, frame);
+
+            using var result = new SKBitmapFrame(bm);
+            yield return result;
+        }
+    }
+
     public static void Main_NoisePic(string[] args)
     {
         var width = 1200;
@@ -67,7 +107,7 @@ internal class Program
         }
     }
 
-    private static void Main(string[] args)
+    private static void Main_NoiseVideo(string[] args)
     {
         // using var bm = new SKBitmap(200, 100);
         // using var canvas = new SKCanvas(bm);

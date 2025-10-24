@@ -1,5 +1,6 @@
 {
-    "recommendations": [
-        "samplavigne.p5-vscode"
-    ]
+  "recommendations": [
+    "samplavigne.p5-vscode",
+    "streetsidesoftware.code-spell-checker"
+  ]
 }

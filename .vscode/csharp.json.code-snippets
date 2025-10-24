@@ -1,0 +1,30 @@
+{
+  "C# Class Template": {
+    "prefix": "csclass",
+    "body": [
+      "using System;",
+      "",
+      "namespace ${1:NamespaceName}",
+      "{",
+      "    public class ${2:ClassName}",
+      "    {",
+      "        // Constructor",
+      "        public ${2:ClassName}()",
+      "        {",
+      "            ",
+      "        }",
+      "",
+      "        // Properties",
+      "        public ${3:PropertyType} ${4:PropertyName} { get; set; }",
+      "",
+      "        // Methods",
+      "        public void ${5:MethodName}()",
+      "        {",
+      "            ",
+      "        }",
+      "    }",
+      "}"
+    ],
+    "description": "A basic C# class template"
+  }
+}

@@ -31,8 +31,13 @@ public static class Utilities
             }
         }
 
+        return ArrayToImage1D(width, height, pixelValues);
+    }
+
+    public static SKBitmap ArrayToImage1D(int width, int height, uint[] pixelArray)
+    {
         SKBitmap bitmap = new();
-        GCHandle gcHandle = GCHandle.Alloc(pixelValues, GCHandleType.Pinned);
+        GCHandle gcHandle = GCHandle.Alloc(pixelArray, GCHandleType.Pinned);
         SKImageInfo info = new(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
 
         IntPtr ptr = gcHandle.AddrOfPinnedObject();
