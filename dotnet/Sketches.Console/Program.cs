@@ -7,6 +7,7 @@ using Sketches.Console;
 using System.Numerics;
 using FFMpegCore.Arguments;
 using Sketches.Console.Scenes.Canandaigua;
+using Sketches.Console.Scenes.Mandelbrot;
 
 
 internal class Program
@@ -15,13 +16,34 @@ internal class Program
     private static void Main(string[] args)
     {
         var workingDir = Directory.GetParent(Environment.CurrentDirectory)!.Parent!.Parent!.FullName;
-        var videoPath = Path.Combine(workingDir, "renders/render.webm");
+        var rendersDir = Path.Combine(workingDir, "renders");
+
+        var opts = new RendererOptions
+        {
+            Width = 1200,
+            Height = 800,
+            Length = 10,
+            Filename = $"mandelbrot_{DateTime.Now:yyyyMMdd_HHmmss}"
+        };
+        IRenderable src = new Mandelbrot(opts.Height, opts.Width, 0.001);
+
+        var renderer = new Renderer(rendersDir);
+        renderer.RenderVideoToFile(src, opts);
+    }
+
+
+    private static void Main_Renderer(string[] args)
+    {
+        var workingDir = Directory.GetParent(Environment.CurrentDirectory)!.Parent!.Parent!.FullName;
+        var rendersDir = Path.Combine(workingDir, "renders");
+        var videoPath = Path.Combine(workingDir, $"renders/mandelbrot_{DateTime.Now:yyyyMMdd_HHmmss}.webm");
 
         var width = 1200;
         var height = 800;
         var count = 10;
 
-        IRenderable render = new Background(width, height);
+        // IRenderable render = new Background(width, height);
+        IRenderable render = new Mandelbrot(height, width, 0.001);
         var frames = RenderFrames(render, count, width, height);
 
         RawVideoPipeSource videoFramesSource = new(frames) { FrameRate = 30 };
@@ -42,12 +64,16 @@ internal class Program
     {
         for (int t = 0; t < count; t++)
         {
+            Console.WriteLine($"Rendering frame {t + 1} of {count}");
+
             var frame = render.Render(t);
             var bm = Utilities.ArrayToImage1D(width, height, frame);
 
             using var result = new SKBitmapFrame(bm);
             yield return result;
         }
+
+        Console.WriteLine("Rendering complete! 🎉");
     }
 
     public static void Main_NoisePic(string[] args)
@@ -142,28 +168,6 @@ internal class Program
             throw new Exception("You need to install ffmpeg, visit https://www.ffmpeg.org/download.html", ex);
         }
 
-    }
-
-    private static IEnumerable<IVideoFrame> CreateFrames(int count, int width, int height)
-    {
-        using SKFont textFont = new(SKTypeface.FromFamilyName("consolas"), size: 32);
-        using SKPaint textPaint = new(textFont) { Color = SKColors.Yellow, TextAlign = SKTextAlign.Center };
-        using SKPaint rectanglePaint = new() { Color = SKColors.Green, Style = SKPaintStyle.Fill };
-        SKColor backgroundColor = SKColors.Navy;
-
-        for (int i = 0; i < count; i++)
-        {
-            Console.WriteLine($"\rRendering frame {i + 1} of {count}");
-            using SKBitmap bmp = new(width, height, SKColorType.Bgra8888, SKAlphaType.Unpremul);
-            using SKCanvas canvas = new(bmp);
-            canvas.Clear(backgroundColor);
-            canvas.DrawRect(i, i, i * 2, i * 2, rectanglePaint);
-            canvas.DrawText("SkiaSharp", bmp.Width / 2, bmp.Height * .4f, textPaint);
-            canvas.DrawText($"Frame {i}", bmp.Width / 2, bmp.Height * .6f, textPaint);
-
-            using SKBitmapFrame frame = new(bmp);
-            yield return frame;
-        }
     }
 }
 
