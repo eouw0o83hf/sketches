@@ -12,7 +12,8 @@ public class Mandelbrot(int _height, int _width, double _scale) : IRenderable
         var xCenter = (_width / 4);
         var result = new uint[_height * _width];
 
-        for (var i = 0; i < _height; ++i)
+        Parallel.For(0, _height, i =>
+        // for (var i = 0; i < _height; ++i)
         {
             for (var j = 0; j < _width; ++j)
             {
@@ -22,7 +23,7 @@ public class Mandelbrot(int _height, int _width, double _scale) : IRenderable
 
                 result[i * _width + j] = m(c).RGBA;
             }
-        }
+        });
 
         return result;
     }
